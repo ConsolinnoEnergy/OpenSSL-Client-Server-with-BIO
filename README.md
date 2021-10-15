@@ -5,13 +5,19 @@ This application shows how to create an OpenSSL TLS connection over TCP sockets 
 ## Prerequisites
 1. Create a certificate and key file with this command:
 ```
-openssl req -x509 -newkey rsa:4096 -nodes -keyout key.pem -out cert.pem -days 365
+cd Server && openssl req -x509 -newkey rsa:4096 -nodes -keyout key.pem -out cert.pem -days 365 && cd ..
+cd Client && openssl req -x509 -newkey rsa:4096 -nodes -keyout key.pem -out cert.pem -days 365 && cd ..
 ```
-2. Change the paths of the certificate and key file in OpenSSL_BIO_Server/Client.h.
 
 ## Start
 1. Build & run server.
+```
+cd Server && cmake . && make && ./Openssl-with-bio-Server
+```
 2. Build & run client.
+```
+cd Client && cmake . && make && ./Openssl-with-bio-Client
+```
 3. When TLS handshake is finished try sending a message by typing into the console of the client.
 
 ## Other useful examples
