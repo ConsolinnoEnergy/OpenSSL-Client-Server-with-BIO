@@ -46,8 +46,8 @@ private:
     BIO* writeBIO;
 
     const int BUFFER_SIZE = 4096;
-    const char* CERT_FILE = "/home/denis/workspace_cpp/OpenSSL/assets/cert.pem";
-    const char* KEY_FILE = "/home/denis/workspace_cpp/OpenSSL/assets/key.pem";
+    const char* CERT_FILE = "cert.pem";
+    const char* KEY_FILE = "key.pem";
 };
 
 #endif /* OpenSSL_BIO_Client_H_ */

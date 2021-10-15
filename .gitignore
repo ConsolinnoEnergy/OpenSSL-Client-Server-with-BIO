@@ -1,0 +1,6 @@
+*.pem
+*.cmake
+CMakeFiles/
+CMakeCache.txt
+Openssl-with-bio-Client
+Openssl-with-bio-Server
