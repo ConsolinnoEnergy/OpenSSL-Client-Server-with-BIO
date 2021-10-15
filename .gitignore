@@ -4,3 +4,7 @@ CMakeFiles/
 CMakeCache.txt
 Openssl-with-bio-Client
 Openssl-with-bio-Server
+Makefile
+build/
+.vscode
+.vscode-ctags
