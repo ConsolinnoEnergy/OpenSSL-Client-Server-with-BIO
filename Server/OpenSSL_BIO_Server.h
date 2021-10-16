@@ -49,7 +49,7 @@ private:
     BIO* readBIO;
     BIO* writeBIO;
 
-    const int BUFFER_SIZE = 4096;
+    const int BUFFER_SIZE = 16384;
     const char* CERT_FILE = "cert.pem";
     const char* KEY_FILE = "key.pem";
 };

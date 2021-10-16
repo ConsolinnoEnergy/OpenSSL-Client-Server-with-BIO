@@ -16,6 +16,8 @@
 #include <openssl/ssl.h>
 #include <openssl/err.h>
 #include <cstring>
+#include <string>
+#include <iostream>
 
 OpenSSL_BIO_Server::OpenSSL_BIO_Server() {}
 
@@ -119,10 +121,11 @@ void OpenSSL_BIO_Server::doSSLHandshake()
         }
         else {
             int receivedBytes = read(clientSocket, buffer, BUFFER_SIZE);
-            for(int i = 0; i < receivedBytes; i++){
-                buffer[i] = buffer[i + shift]; 
-            }
+            
             if (receivedBytes > 0) {
+                for(int i = 0; i < receivedBytes; i++){
+                    buffer[i] = buffer[i + shift]; 
+                }
                 receivedBytes = receivedBytes - shift;
                 printf("Host has received %d bytes data\n", receivedBytes);
                 BIO_write(readBIO, buffer, receivedBytes);
@@ -131,29 +134,110 @@ void OpenSSL_BIO_Server::doSSLHandshake()
     }
 
     printf("Host SSL handshake done!\n");
+
+    //Wait for socks subnegotiation data
+
+    bool sockv5SubNegotiationRead = false;
+
+    while(!sockv5SubNegotiationRead){
+        int receivedBytes = read(clientSocket, buffer, BUFFER_SIZE);
+        
+        if (receivedBytes > 0) {
+            printf("Host has received %d bytes data\n", receivedBytes);
+
+            for(int i = 0; i < receivedBytes; i++){
+                buffer[i] = buffer[i + shift]; 
+            }
+            receivedBytes = receivedBytes - shift;
+            BIO_write(readBIO, buffer, receivedBytes);
+            int sizeUnencryptBytes = SSL_read(ssl, buffer, receivedBytes);
+            if (sizeUnencryptBytes < 0) {
+                perror("SSL_read() in subnegotiation failed");
+                exit(EXIT_FAILURE);
+            }else{
+                char* msg = new char[sizeUnencryptBytes];
+                memcpy(msg, buffer, sizeUnencryptBytes);
+                printf("Subnegotiation Auth method: %d\n", atoi(msg));
+            }
+
+            buffer[0] = 0;
+
+            SSL_write(ssl, buffer, 1);
+
+            int bytesToWrite = BIO_read(writeBIO, buffer, sizeof(buffer));
+
+            if (bytesToWrite > 0) {
+                for(int i=bytesToWrite + shift -1; i >= shift; i--){
+                    buffer[i] = buffer[i - shift]; 
+                }
+                bytesToWrite = bytesToWrite + shift;
+                printf("Host has %d bytes encrypted data to send\n", bytesToWrite);
+                write(clientSocket, buffer, bytesToWrite);
+            }
+            sockv5SubNegotiationRead = true;
+        }
+    }
+
+
+
+    printf("Host has %d bytes data to send\n", 2);
+    write(clientSocket, buffer, 2);
+
+    printf("Host Socks v5 subnegotiation done!\n");
 }
 
 char* OpenSSL_BIO_Server::readFromSocket()
 {
-    char* buffer[BUFFER_SIZE];
+    char buffer[BUFFER_SIZE] = { 0 };
+
+    int shift = 4;
 
     int receivedBytes = read(clientSocket, buffer, BUFFER_SIZE);
+    
     if (receivedBytes > 0) {
+        //Shift data, separate header and encrypted data
+        for(int i = 0; i < receivedBytes; i++){
+            buffer[i] = buffer[i + shift]; 
+        }
+        receivedBytes = receivedBytes - shift;
+        
         printf("Host has received %d bytes encrypted data\n", receivedBytes);
         BIO_write(readBIO, buffer, receivedBytes);
-    }
 
-    // SSL_read overrides buffer
-    int sizeUnencryptBytes = SSL_read(ssl, buffer, receivedBytes);
-    if (sizeUnencryptBytes < 0) {
-        perror("SSL_read() failed");
+        // SSL_read overrides buffer
+        int sizeUnencryptBytes = SSL_read(ssl, buffer, receivedBytes);
+        if (sizeUnencryptBytes < 0) {
+            perror("SSL_read() failed");
+            exit(EXIT_FAILURE);
+        }
+
+        char* msg = new char[sizeUnencryptBytes];
+        memcpy(msg, buffer, sizeUnencryptBytes);
+
+        //Prepare and send test answer
+        buffer[0] = 1;
+        buffer[1] = 0;
+
+        int encSize = SSL_write(ssl, buffer, 2);
+
+        int bytesToWrite = BIO_read(writeBIO, buffer, sizeof(buffer));
+
+        shift = 2;
+
+        if (bytesToWrite > 0) {
+            for(int i=bytesToWrite + shift -1; i >= shift; i--){
+                buffer[i] = buffer[i - shift]; 
+            }
+            bytesToWrite = bytesToWrite + shift;
+            printf("Host has %d bytes encrypted data to send\n", bytesToWrite);
+            write(clientSocket, buffer, bytesToWrite);
+        }
+
+        return msg;
+    }else{
         exit(EXIT_FAILURE);
     }
 
-    char* msg = new char[sizeUnencryptBytes];
-    memcpy(msg, buffer, sizeUnencryptBytes);
-
-    return msg;
 }
 
 void OpenSSL_BIO_Server::initOpenSSL()
