@@ -12,7 +12,7 @@ int main(int argc, char **argv)
 {
     OpenSSL_BIO_Server server;
 
-    server.createSocket(8000);
+    server.createSocket(1080);
     server.initOpenSSL();
     server.waitForIncomingConnection();
 

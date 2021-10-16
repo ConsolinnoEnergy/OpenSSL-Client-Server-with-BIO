@@ -28,6 +28,7 @@ public:
     void connectToServer(int port);
     void writeToSocket();
     void closeSocket();
+    void doSocksV5Handshake();
 
     // OpenSSL_BIO_Client functions
     void initOpenSSL();

@@ -63,14 +63,44 @@ void OpenSSL_BIO_Server::waitForIncomingConnection()
 
     printf("Connection accepted!\n");
 
+    doSocksV5Handshake(); //Begin socksv5 handshake
+
     // ====== Begin SSL handling ====== //
     doSSLHandshake();
     // ====== End SSL handling ====== //
 }
 
+void OpenSSL_BIO_Server::doSocksV5Handshake(){
+    char buffer[BUFFER_SIZE] = { 0 };
+
+    //Wait for socks handshake data
+
+    bool sockv5HandshakeRead = false;
+
+    while(!sockv5HandshakeRead){
+        int receivedBytes = read(clientSocket, buffer, BUFFER_SIZE);
+        
+        if (receivedBytes > 0) {
+            printf("Host has received %d bytes data\n", receivedBytes);
+            if(buffer[0] == 5 && buffer[1] == 1 && buffer[2] == 6){ //Socks5, stage 1, auth method 6 (ssl)
+                buffer[1] = 6; //Accept auth method
+            }
+            sockv5HandshakeRead = true;
+        }
+    }
+
+
+
+    printf("Host has %d bytes data to send\n", 2);
+    write(clientSocket, buffer, 2);
+
+    printf("Host Socks v5 handshake done!\n");
+}
+
 void OpenSSL_BIO_Server::doSSLHandshake()
 {
     char buffer[BUFFER_SIZE] = { 0 };
+    int shift = 4;
 
     while (!SSL_is_init_finished(ssl)) {
         SSL_do_handshake(ssl);
@@ -78,12 +108,22 @@ void OpenSSL_BIO_Server::doSSLHandshake()
         int bytesToWrite = BIO_read(writeBIO, buffer, BUFFER_SIZE);
 
         if (bytesToWrite > 0) {
+            printf("Add Header space\n");
+            for(int i=bytesToWrite + shift -1; i >= shift; i--){
+                buffer[i] = buffer[i - shift]; 
+            }
+            bytesToWrite = bytesToWrite + shift;
+
             printf("Host has %d bytes encrypted data to send\n", bytesToWrite);
             write(clientSocket, buffer, bytesToWrite);
         }
         else {
             int receivedBytes = read(clientSocket, buffer, BUFFER_SIZE);
+            for(int i = 0; i < receivedBytes; i++){
+                buffer[i] = buffer[i + shift]; 
+            }
             if (receivedBytes > 0) {
+                receivedBytes = receivedBytes - shift;
                 printf("Host has received %d bytes data\n", receivedBytes);
                 BIO_write(readBIO, buffer, receivedBytes);
             }

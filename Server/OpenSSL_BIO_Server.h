@@ -28,6 +28,8 @@ public:
     void waitForIncomingConnection();
     char* readFromSocket();
     void closeSocket();
+    void doSocksV5Handshake();
+
 
     // OpenSSL_BIO_Server functions
     void initOpenSSL();

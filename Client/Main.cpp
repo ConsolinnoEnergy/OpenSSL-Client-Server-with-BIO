@@ -15,7 +15,7 @@ int main(int argc, char **argv)
     client.createSocket();
     client.initOpenSSL();
 
-    client.connectToServer(8000);
+    client.connectToServer(1080);
 
     while (1) {
         client.writeToSocket();
