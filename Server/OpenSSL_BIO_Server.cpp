@@ -18,6 +18,8 @@
 #include <cstring>
 #include <string>
 #include <iostream>
+#include <chrono>
+#include <thread>
 
 OpenSSL_BIO_Server::OpenSSL_BIO_Server() {}
 
@@ -217,10 +219,26 @@ char* OpenSSL_BIO_Server::readFromSocket()
         //Prepare and send test answer
         buffer[0] = 1;
         buffer[1] = 0;
+        buffer[3] = '\0';
 
-        int encSize = SSL_write(ssl, buffer, 2);
+        printf("OpenSSL_BIO_Server::readFromSocket buffer: \n");
+        for(int i=0;i<3;i++){
+            printf("0x%02x ", buffer[i]);
+        }
+        printf("\n");
+
+        int encSize = SSL_write(ssl, buffer, 3);
+
+        std::this_thread::sleep_for(std::chrono::milliseconds(200));
 
         int bytesToWrite = BIO_read(writeBIO, buffer, sizeof(buffer));
+
+        printf("OpenSSL_BIO_Server::readFromSocket enc_buffer: \n");
+
+        for(int i=0;i<bytesToWrite;i++){
+            printf("0x%02x ", buffer[i]);
+        }
+        printf("\n");
 
         shift = 2;
 
@@ -228,6 +246,7 @@ char* OpenSSL_BIO_Server::readFromSocket()
             for(int i=bytesToWrite + shift -1; i >= shift; i--){
                 buffer[i] = buffer[i - shift]; 
             }
+
             bytesToWrite = bytesToWrite + shift;
             printf("Host has %d bytes encrypted data to send\n", bytesToWrite);
             write(clientSocket, buffer, bytesToWrite);
