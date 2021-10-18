@@ -219,26 +219,19 @@ char* OpenSSL_BIO_Server::readFromSocket()
         //Prepare and send test answer
         buffer[0] = 1;
         buffer[1] = 0;
-        buffer[3] = '\0';
 
-        printf("OpenSSL_BIO_Server::readFromSocket buffer: \n");
-        for(int i=0;i<3;i++){
-            printf("0x%02x ", buffer[i]);
-        }
-        printf("\n");
-
-        int encSize = SSL_write(ssl, buffer, 3);
+        int encSize = SSL_write(ssl, buffer, 2);
 
         std::this_thread::sleep_for(std::chrono::milliseconds(200));
 
         int bytesToWrite = BIO_read(writeBIO, buffer, sizeof(buffer));
 
-        printf("OpenSSL_BIO_Server::readFromSocket enc_buffer: \n");
+        // printf("OpenSSL_BIO_Server::readFromSocket enc_buffer: \n");
 
-        for(int i=0;i<bytesToWrite;i++){
-            printf("0x%02x ", buffer[i]);
-        }
-        printf("\n");
+        // for(int i=0;i<bytesToWrite;i++){
+        //     printf("0x%02x ", buffer[i]);
+        // }
+        // printf("\n");
 
         shift = 2;
 
