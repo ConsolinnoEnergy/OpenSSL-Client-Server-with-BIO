@@ -25,10 +25,16 @@ public:
 
     // Socket functions
     void createSocket(int port);
+    void createOutSocket( );
+    void connectToServer(struct sockaddr_in serverAddress);
+    void writeToSocket(char* buffer);
     void waitForIncomingConnection();
     char* readFromSocket();
+    char* readFromServerSocket(); 
     void closeSocket();
     void doSocksV5Handshake();
+
+    
 
 
     // OpenSSL_BIO_Server functions
@@ -41,8 +47,10 @@ public:
 private:
     int serverSocket;
     int clientSocket;
+    int outSocket; 
     struct sockaddr_in serverAddress;
     struct sockaddr_in clientAddress;
+    struct sockaddr_in outAddress; 
 
     SSL* ssl;
     SSL_CTX* context;
