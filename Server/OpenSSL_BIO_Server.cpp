@@ -44,7 +44,9 @@ void OpenSSL_BIO_Server::createSocket(int port)
 
     // Allow binding to already used port
     int optval = 1;
-    setsockopt(serverSocket, SOL_SOCKET, SO_KEEPALIVE| SO_REUSEPORT, &optval, sizeof(optval));
+    setsockopt(serverSocket, SOL_SOCKET, SO_REUSEPORT, &optval, sizeof(optval));
+
+
  
 
     if (bind(serverSocket, (struct sockaddr*) &serverAddress, sizeof(serverAddress)) < 0) {
@@ -73,7 +75,12 @@ void OpenSSL_BIO_Server::connectToServer(struct sockaddr_in serverAddress)
     
     printf("connect to Server...\n");
 
-    //fcntl(clientSocket, F_SETFL, O_NONBLOCK);
+ 
+
+    struct timeval tv;
+    tv.tv_sec = 1;
+    tv.tv_usec = 0;
+    setsockopt(outSocket, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof tv);
 
     if (connect(outSocket, (struct sockaddr*) &serverAddress, sizeof(serverAddress)) < 0) {
         perror("Unable to connect");
@@ -99,8 +106,10 @@ void OpenSSL_BIO_Server::waitForIncomingConnection()
     clientSocket = accept(serverSocket, (struct sockaddr*) &clientAddress, &clientAddressLen);
 
 
-    //fcntl(clientSocket, F_SETFL, O_NONBLOCK);
-
+    struct timeval tv;
+    tv.tv_sec = 1;
+    tv.tv_usec = 0;
+    setsockopt(clientSocket, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof tv);
 
     if (clientSocket < 0) {
         perror("Accept on socket failed");
@@ -253,7 +262,7 @@ char* OpenSSL_BIO_Server::readFromSocket()
     //     return NULL;
     // }
 
-    int receivedBytes = read(clientSocket, buffer, BUFFER_SIZE);    
+    int receivedBytes = recv(clientSocket, buffer, BUFFER_SIZE,0);    
     printf("readFromSocket receivedBytes %d\n",receivedBytes);
 
     if (receivedBytes > 0)
@@ -351,7 +360,7 @@ char* OpenSSL_BIO_Server::readFromSocket()
 
                     bytesToWrite = bytesToWrite + shift;
                     //bytesToWrite = bytesToWrite;
-                    printf("Host has %d bytes encrypted data to send\n", bytesToWrite);
+                    printf("server connection: Host has %d bytes encrypted data to send\n", bytesToWrite);
                     write(clientSocket, buffer, bytesToWrite);
                 }
 
@@ -374,11 +383,11 @@ char* OpenSSL_BIO_Server::readFromSocket()
 
                     bytesToWrite = bytesToWrite + shift;
                     //bytesToWrite = bytesToWrite;
-                    printf("Host has %d bytes encrypted data to send\n", bytesToWrite);
+                    printf("endpoint conformation Host has %d bytes encrypted data to send\n", bytesToWrite);
                     write(clientSocket, buffer, bytesToWrite);
                 }
 
-                
+                readFromSocket();
 
 
                 break;
@@ -409,6 +418,7 @@ char* OpenSSL_BIO_Server::readFromSocket()
        
         return msg;
     } else {
+     
         
         return NULL; 
     }
@@ -419,7 +429,7 @@ char* OpenSSL_BIO_Server::readFromSocket()
 
 char* OpenSSL_BIO_Server::readFromServerSocket()
 {
-    m_mtxServer.lock();
+     
      printf("readFromServerSocket\n");
     char buffer[BUFFER_SIZE] = { 0 };
 
@@ -457,10 +467,12 @@ char* OpenSSL_BIO_Server::readFromServerSocket()
         printf("Forward  %d bytes encrypted data to send\n", bytesToWrite+shift);
         write(clientSocket, buffer, bytesToWrite+shift);
         readFromSocket(); 
-        m_mtxServer.unlock();
+   
         return msg; 
     }
-    m_mtxServer.unlock();
+
+    readFromSocket();
+ 
     return NULL; 
 
 }
