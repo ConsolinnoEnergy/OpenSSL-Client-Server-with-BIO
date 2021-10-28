@@ -9,7 +9,8 @@
 #define OpenSSL_BIO_Server_H_
 
 #include <netinet/in.h>
-
+#include <atomic>
+#include <mutex>
 struct ssl_ctx_st;
 struct ssl_st;
 struct bio_st;
@@ -27,12 +28,15 @@ public:
     void createSocket(int port);
     void createOutSocket( );
     void connectToServer(struct sockaddr_in serverAddress);
-    void writeToSocket(char* buffer);
+    void writeToSocket(char* buffer, int size);
     void waitForIncomingConnection();
     char* readFromSocket();
-    char* readFromServerSocket(); 
+    char* readFromServerSocket();
     void closeSocket();
     void doSocksV5Handshake();
+
+    bool getServerConnected() {return m_serverConnected;}
+    bool getClientConnected() {return m_clientConnected;}
 
     
 
@@ -45,12 +49,16 @@ public:
     void doSSLHandshake();
 
 private:
-    int serverSocket;
-    int clientSocket;
-    int outSocket; 
+    std::atomic<int> serverSocket;
+    std::atomic<int> clientSocket;
+    std::atomic<int> outSocket; 
     struct sockaddr_in serverAddress;
     struct sockaddr_in clientAddress;
     struct sockaddr_in outAddress; 
+
+    bool m_serverConnected = false; 
+    bool m_clientConnected = false; 
+    std::mutex m_mtxServer; 
 
     SSL* ssl;
     SSL_CTX* context;

@@ -7,29 +7,59 @@
 
 #include <stdio.h>
 #include "OpenSSL_BIO_Server.h"
+#include <thread>  
+
+OpenSSL_BIO_Server server;
+
+void thread1()
+{
+
+    while (1)
+    {
+ 
+        if (server.getServerConnected())
+        {
+            if (NULL == server.readFromServerSocket())
+            {
+            
+            }
+        }
+
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    }
+}
+
+void thread2 () {
+    while(1) {
+ 
+     server.readFromSocket()  ; 
+     std::this_thread::sleep_for(std::chrono::milliseconds(10));
+       
+    }
+}
+
 
 int main(int argc, char **argv)
 {
-    OpenSSL_BIO_Server server;
+  
+
+ 
 
     server.createSocket(1080);
     server.createOutSocket();
     server.initOpenSSL();
     server.waitForIncomingConnection();
-
-    while (1) {
-        char* msg = server.readFromSocket();
-         
-        printf("Message: %s\n", msg);
-        delete (msg);
-
-        char* servermsg = server.readFromServerSocket(); 
-        printf("Server Message: %s\n", servermsg);
-        delete (servermsg);
+ 
+  // std::thread t1 (thread2); 
+    while( 1 ) {
+      server.readFromServerSocket() ;
     }
+   //t1.join(); 
+   
+  
 
-    server.closeSocket();
-    server.cleanupOpenSSL();
+    //server.closeSocket();
+    //server.cleanupOpenSSL();
 
 }
 
