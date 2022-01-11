@@ -27,6 +27,7 @@ public:
     void createSocket();
     void connectToServer(int port);
     void writeToSocket();
+    void readFromSocket();
     void closeSocket();
     void doSocksV5Handshake();
 

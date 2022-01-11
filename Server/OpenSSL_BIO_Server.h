@@ -33,7 +33,6 @@ public:
     char* readFromSocket();
     char* readFromServerSocket();
     void closeSocket();
-    void doSocksV5Handshake();
 
     bool getServerConnected() {return m_serverConnected;}
     bool getClientConnected() {return m_clientConnected;}

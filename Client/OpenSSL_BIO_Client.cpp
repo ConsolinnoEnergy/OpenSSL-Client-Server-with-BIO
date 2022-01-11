@@ -43,43 +43,15 @@ void OpenSSL_BIO_Client::connectToServer(int port)
 
     printf("Connected to server\n");
 
-    doSocksV5Handshake();
-
     // ====== Begin SSL handling ====== //
     doSSLHandshake();
     // ====== End SSL handling ====== //
-}
-
-void OpenSSL_BIO_Client::doSocksV5Handshake(){
-    char buffer[BUFFER_SIZE] = { 0 };
-
-    printf("Host has %d bytes data to send\n", 3);
-    buffer[0] = 5; //Socksv5
-    buffer[1] = 1; //stage 1
-    buffer[2] = 6; //auth method request type 6
-    write(clientSocket, buffer, 3);
-
-    bool sockv5HandshakeRead = false;
-
-    while(!sockv5HandshakeRead){
-        int receivedBytes = read(clientSocket, buffer, BUFFER_SIZE);
-        
-        if (receivedBytes > 0) {
-            printf("Host has received %d bytes data\n", receivedBytes);
-            if(buffer[0] == 5 && buffer[1] == 6){ //Socks5, auth method 6 accept(ssl)
-                sockv5HandshakeRead = true;
-            }            
-        }
-    }
-
-    printf("Host Socks v5 handshake done!\n");
 }
 
 void OpenSSL_BIO_Client::doSSLHandshake()
 {
     char buffer[BUFFER_SIZE] = { 0 };
 
-    int shift = 4;
 
     while (!SSL_is_init_finished(ssl)) {
         SSL_do_handshake(ssl);
@@ -87,22 +59,12 @@ void OpenSSL_BIO_Client::doSSLHandshake()
         int bytesToWrite = BIO_read(writeBIO, buffer, BUFFER_SIZE);
 
         if (bytesToWrite > 0) {
-            printf("Add Header space\n");
-            for(int i=bytesToWrite + shift -1; i >= shift; i--){
-                buffer[i] = buffer[i - shift]; 
-            }
-            bytesToWrite = bytesToWrite + shift;
-
             printf("Host has %d bytes encrypted data to send\n", bytesToWrite);
             write(clientSocket, buffer, bytesToWrite);
         }
         else {
             int receivedBytes = read(clientSocket, buffer, BUFFER_SIZE);
-            for(int i = 0; i < receivedBytes; i++){
-                buffer[i] = buffer[i + shift]; 
-            }
             if (receivedBytes > 0) {
-                receivedBytes = receivedBytes - shift;
                 printf("Host has received %d bytes data\n", receivedBytes);
                 BIO_write(readBIO, buffer, receivedBytes);
             }
@@ -130,6 +92,32 @@ void OpenSSL_BIO_Client::writeToSocket()
         if (bytesToWrite > 0) {
             printf("Host has %d bytes encrypted data to send\n", bytesToWrite);
             write(clientSocket, buffer, bytesToWrite);
+        }
+    }
+}
+
+void OpenSSL_BIO_Client::readFromSocket()
+{
+    char buffer[BUFFER_SIZE] = { 0 };
+
+    //TODO: use buffer data from needed socket / tls
+    int receivedBytes = recv(clientSocket, buffer, BUFFER_SIZE,0);
+
+    if (receivedBytes > 0) {
+        // Note: No need to do BIO_write(readBIO) before, SSL_write takes
+        // buffer with unencrypted data directly.
+        // See: https://www.openssl.org/docs/man1.1.1/man3/SSL_write.html
+        BIO_write(readBIO, buffer, receivedBytes);
+
+        int sizeUnencryptBytes = SSL_read(ssl, buffer, receivedBytes);
+        if (sizeUnencryptBytes < 0)
+        {
+            perror("SSL_read() failed");
+            exit(EXIT_FAILURE);
+        }else {
+            printf("Host has %d bytes encrypted data to send\n", sizeUnencryptBytes);
+            // write(clientSocket, buffer, bytesToWrite);
+            //TODO: forward unencrypted data to iec61850 server over according socket
         }
     }
 }

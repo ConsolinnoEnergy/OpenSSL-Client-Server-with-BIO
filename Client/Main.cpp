@@ -18,7 +18,8 @@ int main(int argc, char **argv)
     client.connectToServer(1080);
 
     while (1) {
-        client.writeToSocket();
+        // client.writeToSocket();
+        // TODO: connect socket to iec server and forward incomming packages
     }
 
     client.closeSocket();
